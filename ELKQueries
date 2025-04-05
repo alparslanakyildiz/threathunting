@@ -1,0 +1,115 @@
+SEARCHING KEYWORDS IN SCRIPT BLOCKS
+winlog.event_data.ScriptBlockText:(PowerUp OR Mimikatz OR NinjaCopy OR Get-
+ModifiablePath OR AllChecks OR AmsiBypass OR PsUACme OR Invoke-DLLInjection OR
+Invoke-ReflectivePEInjection OR Invoke-Shellcode OR Get-GPPPassword OR Get-Keystrokes
+OR Get-TimedScreenshot OR PowerView)
+
+IMAGES POSSIBLE EXECUTES MALICIOUS POWERSHELL CODE
+winlog.event_data.ParentImage:(*mshta.exe OR *rundll32.exe OR *regsvr32.exe OR
+*services.exe OR *winword.exe OR *wmiprvse.exe OR *powerpnt.exe OR *excel.exe OR
+*msaccess.exe OR *mpub.exe OR *visio.exe OR *outlook.exe OR *chrome.exe OR
+*iexplorer.exe OR *sqlserver.exe) AND winlog.event_data.Image : *powershell.exe
+
+
+IF POWERSHELL IS RENAMED 
+winlog.event_data.Description:*PowerShell AND NOT
+(winlog.event_data.Image:*powershell.exe OR
+winlog.event_data.Image:*powershell_ise.exe)
+
+BASE64 ENCODING POWERSHELL DETECTION
+(winlog.event_data.Description:*PowerShell OR winlog.event_data.Image:*powershell.exe) AND winlog.event_data.CommandLine:*-e*
+
+GZIP COMPRESSION
+winlog.event_data.ScriptBlockText:*H4sI*
+
+OBFUSCATION
+EXECUTION WITH AN ASSEMBLY FILE WITH POWERSHELL
+winlog.event_data.ScriptBlockText:((*Load*) AND (*ReadAllBytes* OR *LoadFile*))
+
+POWERSHELL FILE DOWNLOADING DETETCION
+winlog.event_data.ScriptBlockText:(*WebClient* OR *DownloadData* OR *DownloadFile* OR
+*DownloadString* OR *OpenRead* OR *WebRequest* OR *curl* OR *wget* OR *RestMethod* OR
+*WinHTTP* OR *InternetExplorer.Application* OR *Excel.Application* OR
+*Word.Application* OR *Msxml2.XMLHTTP* OR *MsXML2.ServerXML* OR
+*System.XML.XMLDocument* OR *BitsTransfer*)
+
+HUNT FOR OBFUSCATED POWERSHELL CODES
+winlog.event_data.ScriptBlockText:((*char* AND *join*) OR ((*ToInt* OR *ToInt16* OR
+*ToDecimal* OR *ToByte* OR *ToUnit* OR *ToSingle*) AND (*ToChar* OR *ToString* OR
+*String*)) OR (*ForEach* AND *Xor*))
+
+winlog.event_data.ScriptBlockText:(*hctac* OR *kearb* OR *dnammoc* OR *ekovn* OR
+*elifd* OR *rahc* OR *etirw* OR *eddih* OR *tpircs* OR *ssecorp* OR *llehsrewop* OR
+*esnopser* OR *daolnwod* OR *tneilcbew* OR *tneilc* OR *ptth* OR *elifotevas* OR
+*46esab* OR *tcejbo* OR *maerts* OR *hcaerof* OR *retupmoc*)
+
+HUNT FOR RUNDLL MALICIOUS ACTIVITIES
+process.name:rundll32.exe AND (process.args:pcwutl.dll AND process.args:LaunchApplication)
+event.id:7 AND (process.name:cliconfg.exe AND file.path:NTWDBLIB.dll)
+event ID 7 image loaded cliconfig.exe existed dllhijacking vulnerability is utilized by ntwdblib.dll 
+
+
+HUNT FOR PORTFORWARDING AND RDP
+event.id:1 AND process.name:*netsh.exe* *port*
+event.id:1 AND (process.name:netsh.exe AND (process.args:localport=3389 AND
+process.args:action=allow))
+*TSConnections* AND event.id:13
+
+HUNT FOR DYSCNC
+event.id:4662 AND NOT (user.name:*$ OR user.name:AUTHORITY OR user.name:Window) AND
+(object.properties:1131f6ad-9c07-11d1-f79f-00c04fc2dcd2 OR
+object.properties:Replicating)
+
+
+OBJECT PROPERTİES DS REPLICATION 
+https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/1522b774-6464-41a3-87a5-1e5633c3fbbb
+
+WMI USAGE
+event.id:4648 AND process.executable:WMIC.exe
+
+LOLBAS DETECTION
+process.executable:rundll32.exe AND process.args:(url.dll OR ieframe.dll OR
+shdocvw.dll)
+
+process.executable:mshta.exe AND process.args:calc.hta
+
+HUNTING FOR SCHEDULED TASKS
+event.id:1  AND process.executable:(*schtask* OR *at.exe*)
+
+event.id:11 AND file.path:MSOFFICE_
+
+UAC BYPASS DETECTION
+event.id:13 AND registry_key_path:"shell\\runas\\command\\isolatedCommand"
+
+4798 – A user’s local group membership was enumerated
+4799 – A security-enabled local group membership was enumerated
+
+winlog.event_id:(4798 OR 4799) AND winlog.event_data.CallerProcessName:(net OR net1)
+AND winlog.computer_name: MSEDGEWIN10
+
+winlog.event_id:1 AND process.name:*net.exe*
+
+search for net user or net localgroup strings
+
+HUNT FOR PERSISTENCY THROUGHY ACCESSBILTY available in T1015
+winlog.event_data.Image:("C:\Windows\System32\osk.exe" OR
+"C:\Windows\System32\sethc.exe" OR "C:\Windows\System32\utilman.exe" OR
+"C:\Windows\System32\magnify.exe" OR "C:\Windows\System32\narrator.exe" OR
+"C:\Windows\System32\displayswitch.exe" OR "C:\Windows\System32\atbroker.exe") AND
+winlog.event_data.Description:"Windows Command Processor" AND
+winlog.event_data.User:"NT AUTHORITY\SYSTEM" AND
+winlog.computer_name:DC1.insecurebank.local
+
+HUNTING PRIVILIGE ESCALATION THROUGH SCHEDULE TASKS
+
+winlog.event_id:1 AND winlog.event_data.Image:"C:\Windows\system32\schtasks.exe" AND
+winlog.event_data.CommandLine:("C:\users" OR "C:\programdata" OR "C:\Windows\Temp")
+
+T1053 
+winlog.event_id:1 AND winlog.event_data.ParentImage:"taskeng.exe" AND
+winlog.event_data.Image:("cmd.exe" OR "wscript.exe" OR "rundll32.exe" OR
+"cscript.exe" OR "regsrv32.exe" OR "wmic.exe" OR "mshta.exe" OR "powershell.exe")
+
+HUNT FOR RDP OVER SHH TUNNEL
+winlog.event_id:4624 AND winlog.event_data.LogonType:10 AND
+winlog.event_data.IpAddress:"127.0.0.1" AND winlog.computer_name:"PC01.example.local"
