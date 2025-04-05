@@ -1,0 +1,405 @@
+ANALYSING STATISTICS IN SPLUNK
+
+index=* | stats count by index | sort - count
+index=* | stats count by sourcetype | sort - count
+index=* sourcetype="*" | stats count by sourcetype | sort - count
+index=* sourcetype="*" | stats count by sourcetype | sort - count
+
+index=botsv2 192.168.1.1 | stats count by sourcetype | sort - count
+index=botsv2 "*ftp*" sourcetype="stream:ftp" |stats count by src_ip dest_ip | sort - count
+
+SEARCH FOR ISSUER ON SSL
+index=botsv2 sourcetype=stream:tcp ssl_issuer="C = US"
+
+SOURCE IP ANALYSIS STATISTICS
+index=botsv2 192.168.1.100 | stats count by sourcetype | sort - count
+
+index=botsv2 sourcetype="wineventlog" EventCode=4624
+
+index=botsv2 192.168.1.100 |stats count by sourcetype | sort - count
+
+index=botsv2 sourcetype=pan:traffic 192.168.1.100 |stats count by src dest | sort - count
+
+index=botsv2 src=192.168.1.100 sourcetype=suricata |table src_ip src_port dest_ip dest_port alert.signature
+
+index=botsv2 src=192.168.1.100 sourcetype=stream:http |table src_ip src_port dest_ip dst_port http_method  http_user_agent uri_path |stats count by src_ip dest_ip |sort - count
+
+index=botsv2 sourcetype=stream:http src=192.168.1.100 dest=192.168.1.101 |table http_user_agent |stats count by http_user_agent
+
+index=botsv2 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" EventCode=3 |table Image SourceIp SourcePort DestinationIp DestinationPort |stats count by Image
+
+index=botsv2 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" EventCode=3 |table Image SourceIp SourcePort DestinationIp DestinationPort |stats count by DestinationIp | sort - count
+
+index="botsv2" sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" user=FROTHLY\\service3 |stats values(CommandLine) by Computer process parent_process
+
+index=botsv2 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" dest=192.168.1.100* user=FROTHLY\\service3 |timechart count by src
+
+index=botsv2 "*ftp*" | stats count by sourcetype | sort - count
+
+index=botsv2 "*ftp*" sourcetype="stream:ftp" |stats count by src_ip dest_ip | sort - count
+
+index=botsv2 sourcetype=stream:ftp src=* dest=192.168.1.100 | stats count by filename
+
+index=botsv2 sourcetype="stream:dns" *192.168.1.100* |stats count by src_ip |sort - count
+
+index=botsv2 sourcetype="stream:dns" *malware.local* src_ip=10.0.1.100 |stats count by query
+
+index=botsv2 sourcetype=stream:tcp dest_ip=192.168.1.100src_ip=10.0.2.107 | stats count by ssl_cert_sha256
+
+index=botsv2 sourcetype=stream:smtp | stats count by src_ip,sender,recipient,attach_filename{},subject,content_body{},attach_content_md5_hash{}
+
+index=botsv2 sourcetype!=stream:smtp malware.zip | stats count by sourcetype
+
+index=botsv2 sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 "*wmi*" |table parent_process process ParentCommandline CommandLine CurrentDirectory ParentImage Image
+
+index=botsv2 ((Logon_ID=0x171491a OR LogonId=0x171491a) host=venus) | table
+_time EventCode TaskCategory Account_Name Security_ID Process_Command_Line
+CommandLine ParentCommandLine | reverse
+
+https://dspace.cvut.cz/bitstream/handle/10467/83217/F8-BP-2019-Kotlaba-Lukas-thesis.pdf?sequence=-1&isAllowed=y
+
+What is a transaction in Splunk?
+What is the Transaction command in Splunk? The transaction command allows 
+Splunk users to locate events that match certain criteria. Transactions usually include 
+information such as the duration between events and the number of events (eventcount)
+
+S01D01 - Logon attempts using a non-existing account (Kerberos)
+
+index="ad_hunting" sourcetype=XmlWinEventLog EventCode=4768 Status=0x6
+| transaction IpAddress maxpause=5m maxevents=-1 | where eventcount > 5
+| eval Source=if(IpAddress=="::1", Computer, IpAddress) | eval
+accounts=mvcount(TargetUserName) | where accounts > 2 | table _time,
+host, Source, TargetUserName, accounts, eventcount | sort - _time |
+rename _time AS "Time", host AS "Host", Source AS "Source Computer",
+TargetUserName AS "Target Username", accounts AS "Number of Accounts",
+eventcount AS "Total Attempts" | convert ctime(Time)
+
+S01D02 - Logon attempts using a non-existing account (NTLM)
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4776
+Status=0xC0000064 | transaction Workstation maxpause=5m maxevents=-1 |
+where eventcount > 5 | eval accounts=mvcount(TargetUserName) | where
+accounts > 2 | table _time, host, Workstation, TargetUserName,
+accounts, eventcount | sort - _time | rename _time AS "Time", host AS
+"Host", Workstation AS "Source", TargetUserName AS "Target Username",
+accounts AS "Number of Accounts", eventcount AS "Total Attempts"|
+convert ctime(Time)
+
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventid=4776
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventid=4771
+
+01D03 - Excessive failed password attempts from one source (Kerberos)
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4771
+Status=0x18 | transaction IpAddress maxpause=5m maxevents=-1 | where
+eventcount > 5 | eval Source=if(IpAddress=="::1", Computer, IpAddress)
+| eval accounts=mvcount(TargetUserName) | table _time, host, Source,
+TargetUserName, accounts, eventcount | sort - _time | rename _time AS
+"Time", host AS "Host", Source AS "Source Computer", TargetUserName AS
+"Target Username", accounts AS "Number of Accounts", eventcount AS
+"Total Attempts" | convert ctime(Time)
+
+
+
+S01D04 - Excessive failed password attempts from one source (NTLM)
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4771
+Status=0x18 | transaction IpAddress maxpause=5m maxevents=-1 | where
+eventcount > 5 | eval Source=if(IpAddress=="::1", Computer, IpAddress)
+| eval accounts=mvcount(TargetUserName) | table _time, host, Source,
+TargetUserName, accounts, eventcount | sort - _time | rename _time AS
+"Time", host AS "Host", Source AS "Source Computer", TargetUserName AS
+"Target Username", accounts AS "Number of Accounts", eventcount AS
+"Total Attempts" | convert ctime(Time)
+
+
+S01D05 - Excessive failed password attempts towards one account
+
+index="ad_hunting" source=XmlWinEventLog:Security ((EventCode=4776
+Status=0xC000006A) OR (EventCode=4771 Status=0x18)) | eval
+src=if(src=="::1", Computer, src) | transaction TargetUserName
+maxpause=5m maxevents=-1 | eval sources=mvcount(src) | where
+eventcount > 5 AND sources > 1 | table _time, host, TargetUserName,
+sources, src, eventcount | sort - _time | rename _time AS "Time", host
+AS "Host", TargetUserName AS "Target Username", sources AS "Number of
+Sources", src AS "Source", eventcount AS "Total Attempts" | convert
+ctime(Time)
+
+S02D01 - Possible Kerberoasting activity
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4769
+(TicketEncryptionType=0x1 OR TicketEncryptionType=0x3 OR
+TicketEncryptionType=0x17 OR TicketEncryptionType=0x18) | eval
+Source=if(IpAddress=="::1", Computer, IpAddress) | table _time, host,
+Source, TargetUserName, ServiceName, TicketEncryptionType | sort -
+_time | rename _time AS "Time", host AS "Host", TargetUserName AS 
+"Target Username", ServiceName AS "Service Name", TicketEncryptionType
+AS "Ticket Encryption" | convert ctime(Time)
+
+Excessive service ticket requests from one source
+
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4769
+ServiceName != krbtgt | regex ServiceName != "\$$" | transaction
+IpAddress maxpause=5m maxevents=-1 | eval
+services=mvcount(ServiceName) | where services > 1 | eval
+Source=if(IpAddress=="::1", Computer, IpAddress) | table _time, host,
+Source, TargetUserName, services, ServiceName, TicketEncryptionType |
+sort - _time | rename _time AS "Time", host AS "Host", TargetUserName
+AS "Target Username", services AS "Number of Services", ServiceName AS
+"Service Name", TicketEncryptionType AS "Ticket Encryption" | convert
+ctime(Time)
+
+S02D03 - Suspicious external service ticket requests
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4769
+IpPort > 0 (IpPort < 1024 OR (NOT (IpAddress=10.0.0.0/8 OR
+IpAddress=172.16.0.0/12 OR IpAddress=192.168.0.0/16 OR
+IpAddress=127.0.0.1 OR IpAddress=::1))) | table _time, host,
+IpAddress, IpPort, TargetUserName, ServiceName, TicketEncryptionType |
+sort - _time | rename _time AS "Time", host AS "Host", IpAddress AS
+Source, IpPort AS "Source Port", TargetUserName AS "Target Username",
+ServiceName AS "Service Name", TicketEncryptionType AS "Ticket
+Encryption" | convert ctime(Time)
+
+
+S03D01 - Possible dump of lsass.exe (Sysmon events)
+
+index="ad_hunting" source="xmlwineventlog:microsoft-windows-
+sysmon/operational" EventCode=8 OR EventCode=10 NOT
+GrantedAccess=0x1400 NOT GrantedAccess=0x1000 NOT
+GrantedAccess=0x100000 | where (TargetImage LIKE "%lsass.exe") |
+search NOT SourceImage="C:\\Windows\\system32\\wininit.exe" NOT
+SourceImage="C:\\Windows\\system32\\csrss.exe" | transaction host,
+SourceImage, SourceProcessId maxspan=15m | table _time, host,
+SourceImage, SourceProcessId, GrantedAccess | sort - _time | rename
+_time AS "Time", host AS "Host", SourceImage AS "Process",
+SourceProcessId AS "Process ID", GrantedAccess AS "Access Mask" |
+convert ctime(Time)
+
+S03D02 - Possible dump of lsass.exe (Windows events)
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=4656 NOT
+AccessMask=0x1400 NOT AccessMask=0x1000 NOT AccessMask=0x100000 |
+where (ObjectName LIKE "%lsass.exe") | search NOT
+ProcessName="C:\\Windows\\system32\\lsass.exe" | transaction host,
+ProcessName, ProcessId maxspan=15m | table _time, host, ProcessName,
+ProcessId, AccessMask | sort - _time | rename _time AS "Time", host
+AS "Host", ProcessName AS "Process", ProcessId AS "Process ID",
+AccessMask AS "Access Mask" | convert ctime(Time)
+
+Who calls object from lsass.exe execpt own
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventid=4656
+
+4656: A handle to an object was requested
+
+S03D03 - Creation of a dump file
+
+index="ad_hunting" source="xmlwineventlog:microsoft-windows-
+sysmon/operational" EventCode=11 TargetFilename=*dmp | table _time,
+host, Image, ProcessId, TargetFilename | sort - _time | rename _time
+AS "Time", host AS "Host", Image AS "Process", ProcessId AS "Process
+ID", TargetFilename AS "Filename" | convert ctime(Time)
+
+S03D04 - Installation of an unsigned driver
+
+index="ad_hunting" source="xmlwineventlog:microsoft-windows-
+sysmon/operational" EventCode=6 Signed=false | table _time, host,
+ImageLoaded, SHA1, SignatureStatus | sort - _time | rename _time AS
+"Time", host AS "Host", ImageLoaded AS "Image Loaded", SignatureStatus
+AS "Signature Status" | convert ctime(Time)
+
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventid=90006
+
+S03D05 - Access to GPP honeypot in SYSVOL
+
+index="ad_hunting" source=XmlWinEventLog:Security EventCode=5145
+RelativeTargetName="*test.local\\Policies\\{12345}*" | transaction
+IpAddress, SubjectUserSid maxspan=5m maxevents=-1 | table _time, host,
+IpAddress, SubjectUserName, SubjectUserSid, SubjectLogonId | sort -
+_time | rename _time AS "Time", host AS "Host", IpAddress AS "Source
+IP", SubjectUserName AS "Username", SubjectUserSid AS "Account SID",
+SubjectLogonId AS "Logon ID" | convert ctime(Time)
+
+Group Policy Preferences can be used to distribute passwords across the domain. GPP data
+is stored in a domain-wide share SYSVOL, to which all Authenticated Users have read access.
+Therefore, SYSVOL is a common place for attackers to look for credentials. The transaction command 
+is used to group multiple events
+from the same source in a short time to a single one.
+
+S03D06 - Possible credential database dumping
+
+index="ad_hunting" source="xmlwineventlog:security" EventCode=4688
+NewProcessName="*vssadmin.exe"
+replace the process name with this and search again fgdump.exe mimikatz.exe kiwi.exe *dump.exe 
+
+S03D07 - Possible dumping via DC synchronization
+
+index="ad_hunting" source="xmlwineventlog:security" EventCode=4662
+Properties="*1131f6aa-9c07-11d1-f79f-00c04fc2dcd2*" OR
+Properties="*1131f6ad-9c07-11d1-f79f-00c04fc2dcd2*" OR
+Properties="*1131f6ab-9c07-11d1-f79f-00c04fc2dcd2*"
+Caller_User_Name=Administrator
+
+https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/dump-password-hashes-from-domain-controller-with-dcsync
+https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/1522b774-6464-41a3-87a5-1e5633c3fbbb
+
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4662
+
+4662: An operation was performed on an object
+
+Of course the object's audit policy must be enabled for the permissions requested and the user requesting it or a group to which that user belongs. 
+For tracking property level changes to AD objects I recommend using Directory Service Change events (5136...) instead of this event because 5136, etc provide much better information. 
+
+index="ad_hunting" EventCode=4624 "Query ID VALUE ABOVE"
+ıf the result != DC you may find the suspicious attacker
+
+HUNTING WMI PERSISTENCE 
+index=winsysmon EventCode=19 OR EventCode=20 OR EventCode=21 | table _time,
+EventCode, EventDescription, Operation, Computer, Consumer, Query, Destination
+
+Event code 19 20 21 INDICATES WMI ACTIVITIES
+
+HUNT FOR LOGON SCRIPTS
+
+**logon scripts are started by “userinit.exe”. 
+
+index=winsysmon ((ParentImage="*\\userinit.exe" NOT (Image="*\\explorer.exe")) NOT
+((CommandLine="*\\netlogon.bat" OR CommandLine="*\\UsrLogon.cmd"))) | stats
+values(cmdline) dc(Computer) AS hosts count by ParentImage Image
+
+SEARCH MALICIOUS WHICH EXECUTES LOGON SCRIPT:
+
+index=winsysmon ((EventCode="11" OR EventCode="12" OR EventCode="13" OR EventCode="14") AND TargetObject="*UserInitMprLogonScript*") | table Computer,
+EventCode, signature, TargetObject, Details
+
+HUNT FOR RENAMED FILES (POWERSHELL.EXE)
+
+index=winsysmon EventCode=1 AND Description="Windows PowerShell" AND
+(Image!="*\\powershell.exe" AND Image!="*\\powershell_ise.exe") | rex field=Hashes
+".*MD5=(?<MD5>[A-F0-9]*)," | table _time, Computer, User, Image, cmdline,
+ParentImage, MD5
+
+index=winsysmon EventCode=1  AND
+(Image!="*\\CMD.exe" AND Image="*\\Utilman.exe") AND Process="*cmd.exe*" | rex field=Hashes
+".*MD5=(?<MD5>[A-F0-9]*)," | table _time, Computer, User, Image, cmdline,
+ParentImage, MD5
+
+EMPIRE SEARCHING
+
+index=* EventCode=4104 AND ($psversiontable.psversion.major OR
+system.management.automation.utils OR system.management.automation.amsiutils) | eval
+MessageDeobfuscated = replace(Message, "[ `'+\"\^]","") | search
+EnableScriptBlockLogging OR enablescriptblockinvocationlogging OR
+cachedgrouppolicysettings OR ServerCertificateValidationCallback OR expect100continue
+| table _time ComputerName Sid MessageDeobfuscated
+
+index=* EventCode=4104 "*process.php*"
+
+HUNTING MISSPELLED OR UNMANAGED POWERSHELL 
+
+index=* hostapplication | rex field=Message
+".*HostApplication=(?<HostApplication>.*)" | search HostApplication!="*powershell*"
+HostApplication!="*\\sdiagnhost.exe*" | stats count by host HostApplication
+
+HUNTING BASE64 ENCODED POWERSHELL CODE 
+
+index=* EventCode=1 | eval cmdline =replace(cmdline, "-
+[Ee][Nn][Cc][Oo][Dd][Ii][Nn][Gg]", "__encoding") | search Image="*\\powershell.exe"
+(cmdline="* -enc*" OR cmdline="* -en *" OR cmdline="* -e *" OR cmdline="* -ec *") |
+table _time Computer User ParentImage ParentCommandLine
+
+index=* EventCode=1 | eval cmdline =replace(cmdline, "-
+[Ee][Nn][Cc][Oo][Dd][Ii][Nn][Gg]", "__encoding") | search Image="*\\powershell.exe"
+(cmdline="* -enc*" OR cmdline="* -en *" OR cmdline="* -e *" OR cmdline="* -ec *") |
+table _time Computer User cmdline
+
+CommandLine:*H4sI*). Search for base64 gzipped payload in PowerShell command 
+
+https://blog.kostic.dev/posts/tool-to-read-gzip-strings-to-decompress-entity-framework-migration-history-edmx/
+https://www.base64decode.org/ AUTO-DETECT kullan 
+
+HUNT FOR LATERAL MOVMENT WITH SHARES 
+
+5140 5145 EVENT ID NUMBERS for DETECTING SHARES 
+
+index="winsysmon" EventCode=1 ParentImage=\\\\127.0.0.1\\ADMIN$\\*.exe AND
+Image=*\\rundll32.exe | table _time Computer User ParentImage Image
+
+TRY  C$ AND IPC$
+
+127.0.0.1 search for attack
+
+index="winsysmon" EventCode=1 ParentImage=\\\\127.0.0.1\\*$\\*.exe AND
+Image=*\\rundll32.exe | table _time, Computer, User ParentImage Image
+
+HUNT FOR WORD DOCUMENTS
+
+EventCode 15 FileHASHStream has been created
+
+index="winsysmon" EventCode=15 TargetFilename="*.doc.*" | table _time Computer Image TargetFilename MD5
+
+The image of browser_broker indicates that a browser downloaded the content (most likely
+the user visited a link).
+
+index="winsysmon" EventCode=1 ParentImage=*\\winword.exe | table _time Computer User
+Image ParentImage ParentCommandLine
+
+HUNT FOR REGISTERY PERSISTENCE 
+
+index="winsysmon" EventCode=13 "*\\Windows\\CurrentVersion\\Run*" | rex field=Image
+".*\\\\(?<Image_EXE>[^\\\\]*)" | rex field=TargetObject
+".*\\\\CurrentVersion\\\\(?<TargetObj_PATH>.*)" | strcat "Image=\"" Image_EXE "\",
+TargetObject=\"" TargetObj_PATH "\", Details=\"" Details "\"" Image_TargetObj_Details
+| stats dc(Computer) AS Clients values(Image_TargetObj_Details) count by
+EventDescription Image_EXE
+
+HUNT FOR FILESYSTEM PERSISTENCY
+
+index="winsysmon" EventCode=1 (Image="*\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*" OR 
+CommandLine="*\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*") | table _time Computer User Image CommandLine MD5
+
+HUNT FOR INTERNAL RECON
+
+index="winsysmon" EventCode=1 Image=*\\ipconfig.exe OR Image=*\\net.exe OR
+Image=*\\whoami.exe OR Image=*\\netstat.exe OR Image=*\\nbtstat.exe OR
+Image=*\\hostname.exe OR Image=*\\tasklist.exe | bin _time span=15m | stats dc(Image)
+AS CNT_CMDS values(CommandLine) values(ParentCommandLine) count by _time Computer
+User | where CNT_CMDS > 2
+
+https://docs.splunk.com/Documentation/SCS/current/SearchReference/BinCommandExamples
+
+HUNT FOR MALICIOUS VBS FILES
+
+index="winsysmon" EventCode=1 Image="*\\cscript.exe" OR Image="*\\wscript.exe" | rex
+field=Image ".*\\\\(?<Image_fn>[^\\\\]*)" | rex field=ParentImage
+".*\\\\(?<ParentImage_fn>[^\\\\]*)" | stats count by Computer User ProcessId Image
+CommandLine ParentImage ParentCommandLine
+
+FILE TRANSFERRED ANALYSIS WITH ZEEK LOGS SMB INGRESSED TOOL TRANSFERRING
+
+The spath command enables you to extract information from the structured data formats XML and JSON. The command stores
+this information in one or more fields. The command also highlights the syntax in the displayed events list. You can also use the spath() 
+function with the eval command. For more information, see the evaluation functions.
+
+index=zeek sourcetype="zeek_files" SMB | spath "rx_hosts{}" | table
+rx_hosts{}, tx_hosts{}, filename, md5, sha1
+
+index="zeek" sourcetype="zeek_smb_mapping" |table ts id.orig_h id.resp_h id.resp_p path |rename ts AS TIME, id.orig_h AS SourceIP, id.resp_p AS RemotePort
+
+index=zeek sourcetype=zeek_smb_files action="SMB::FILE_OPEN" | table id.orig_h, id.resp_h, id.resp_p, id.orig_p, action, name
+
+The 6 character and randomly-named filenames of shares are one of the distinguishing
+artefacts that is linked to CrackMapExec v4.0 and 5.0.
+
+index=zeek sourcetype=zeek_ntlm | table  id.orig_h, id.orig_p,, id.resp_h, id.resp_p, domainname, success, username,
+
+BASIC POWERSHELL HUNTS
+
+index="winsysmon" EventCode=1 process="*powershell.exe*" CommandLine="*enc*"
+
+index="*" "4104" "*warning*" |table Message
+
+HUNT FOR SELF SIGNED CERTIFICATES
+index=zeek sourcetype=zeek_ssl |table cipher, curve, client_cert_chain_fuids, client_issuer, client_subject, C, version, subject, validation_status
+
