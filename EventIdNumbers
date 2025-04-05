@@ -1,0 +1,91 @@
+Event ID Number	Explanation Of Event ID	LOG TYPE	USED CASES
+			
+4624	Successfull Login	Security Log	"Investigating successfull compromise incidents. You can invesitgate
+login access of the suspicious accounts and times to the computer."
+4625	Failed Login	Security Log	"Investigating Bruteforce attacks, dictionary attacks and suspicious
+access attemptes."
+4634/4647	Successfull Logoff	Security Log	"Investigating anormal access to the network computers by examining
+logoff times."
+4648	Explicit credentials RunAs	Security Log	"Research privilige anomalies in a comuter. Investigating executed
+commands with high priviliges with runas command."
+4672	Login as Administrator	Security Log	Researching for logins as Administrator.
+4776	Local user Authenticate From AD	Security Log	Monitoring local users login activities via AD
+			
+4720	Account is Created	Security Log	Investigating for Creating users 
+4722	Account is Enabled	Security Log	Investigating for Creating users 
+4724	Account Password Reset	Security Log	Monitoring Abnormal Password Reset Activities
+4726	User was Deleted	Security Log	Traceing Deleted Users for nonauthorized logins
+4728	"User Assigned to a Security enabled 
+Group"	Security Log	Analysing members groups
+4732	Member is adding a localgroup	Security Log	Analysing members groups
+4735	Local Group Changed	Security Log	Analysing members groups
+4756	User added a universal group	Security Log	Analysing members groups
+LOGIN TYPE CODES	EXPLANATION		
+2	Login via console	Keybord, KVM, server	
+3	Network Logon	SMB	
+4	Batch Logon	Schedule Tasks	
+5	Windows Service Logon		
+7	Credentials used to lock unlock screen	RDP session reconnect	
+8	Network Logon sending creds cleartext	Telnet, FTP	
+9	Diffrent credentials used than logged on user	RunAs	
+10	Remote Desktop	RDP	
+11,12,13	Cached Credentials are used for login		
+			
+4778	RDP Session Reconnectted	Security Log	Investigating RDP issues on a network
+4779	RDP Session Disconnected	Security Log	Investigating RDP issues on a network
+4624 + Logon Tye 7	RDP session Screen locked or unlocked	Security Log	Investigating RDP issues on a network
+4624+Logon Type 10	RDP LOGON	Security Log	Investigating RDP issues on a network
+1024/1102	Destination Host Name / Destination IP Adress	"Microsoft-Windows-TerminalServices-
+RDPClient Operational.evtx"	Investigating RDP IP addresses
+131/98	Connection Attempts /Successfull Connections	"Microsoft-Windows-TerminalServices-
+RDPCoreTS Operational.evtx"	Investigating RDP IP addresses
+1149	Blank User name	"Microsoft-Windows-TerminalServices-
+RemoteConnectionManager Operational.evtx"	Investigating RDP with Stciky Keys
+21/22/25 - 41	Source IP - Logon Username	"Microsoft-Windows-TerminalServices-
+Local SessionManager Operational.evtx"	Investigating RDP IP addresses
+			
+4768	"Ticket Granting Ticket was granted
+ (successfull logon)"	Security Log	Successfull Kerberos logins for investigating anormal authentication
+4769	Service Ticket Request (access to server resource)	Security Log	Server access for detecting suspicious Kerberos Activities
+4771	Pre-Authentication Failed (failed logon)	Security Log	Kerberos filed login for investigating suspicious ateempts
+			
+5140	Network Share Was Accessed	Security Log	Detecting Suspicious Shares
+5145	Shared Object Accessed	Security Log	Detecting Suspicious Shares
+			
+106 | 4698	Scheduled Task Created	Security Log	For finding suspicious scheduled tasks
+141 | 4699	Scheduled Task Deleted	Security Log	For finding suspicious scheduled tasks
+   140 | 47002	Scheduled Task Updated	Security Log	For finding suspicious scheduled tasks
+200 | 201	Scheduled Task Executed	"Scheduler Log Microsoft-Windows-Task
+Scheduler"	For finding suspicious scheduled tasks
+47000 | 47001	Scheduled Task enabled	Security Log	For finding suspicious scheduled tasks
+			
+4688	New Process Created	Security Log	Inpecting processes for finding suspicious processes
+4689	Process Exit	Security Log	Inpecting processes for finding suspicious processes
+			
+7034	Service Crashed Unexpectedly	System Log	Inspecting suspicious Services
+7035	Service Sent a Start / Stop control	System Log	Inspecting suspicious Services
+7036	Service started or stopped	System Log	Inspecting suspicious Services
+7040	Service Start Type Changed	System Log	Inspecting suspicious Services
+7045	A new Service was installed	System Log	Inspecting suspicious Services
+4697	A new Service was installed	Security Log	Inspecting suspicious Services
+			
+1033	Application installation completed	Application Log	Inspecting suspicious Applications
+1034	Application Removed completed	Application Log	Inspecting suspicious Applications
+11707	Application installation completed	Application Log	Inspecting suspicious Applications
+11708	Application installation Failed	Application Log	Inspecting suspicious Applications
+11724	Application Removed completed	Application Log	Inspecting suspicious Applications
+			
+1102	Audit Log Cleared	Security Log	Investigating Anti Forensic Issues
+104	Audit Log Cleared	System Log	Investigating Anti Forensic Issues
+WMI ARTIFACTS			
+5857	Attackers sometime install malicious WMI provider DLL	Microsoft-Windows-WMI-Activity/Op.	wmiprvse.exe  remote WMI actions
+5860,5861	Registration of Permanent Event Consumers	Microsoft-Windows-WMI-Activity/Op.	Inspecting Event Consumer
+POWERSHELL LOGS			
+40691,40692	Records local initiation of powershell.exe	Microsoft-Windows-Powershell/Op.	Inspecting powershell.exe behaviours
+8193&8194-8197	Records WinRM sessions and connections	Microsoft-Windows-WinRM/Op.	WinRM movements
+4103|4104|4105|4106	Script Block Logging	Microsoft-Windows-Powershell/Op.	wsmprovhost.exe is good indicator for PS Remoting
+WINDOWS APP ERRORS			
+1000,1001,1002	Windows Error Reporting	APPLICATION LOG 	For Detecting Exploit Crashes And Malware Executions
+			
+"4798 – A user’s local group membership was enumerated
+- 4799 – A security-enabled local group membership was enumerated"			
