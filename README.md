@@ -1,4 +1,4 @@
-# threathunting
+# THREAT HUNTING
 Use the filters and request Splunk Or ELK for threat hunting
 Threat Hunting Queries for Splunk and ELK
 
